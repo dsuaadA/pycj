@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Скриншоты и видео</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Kriptoman - Галерея</div>
+        <a href="/" class="nav-link" style="color:#fff; text-decoration:none;">← На главную</a>
+    </nav>
+    <div class="container" id="gallery">
+        <h2>Скриншоты, видео, контакты, SMS</h2>
+        <div id="filesList">Загрузка...</div>
+    </div>
+    <script>
+        fetch('/api/media')
+            .then(r => r.json())
+            .then(files => {
+                const container = document.getElementById('filesList');
+                if (files.length === 0) {
+                    container.innerHTML = '<p>Нет файлов</p>';
+                    return;
+                }
+                let html = '<ul style="list-style:none; padding:0;">';
+                files.forEach(f => {
+                    const date = new Date(f.timestamp).toLocaleString();
+                    const ext = f.filename.split('.').pop().toLowerCase();
+                    let icon = '📄';
+                    if (['jpg','jpeg','png','gif','webp'].includes(ext)) icon = '🖼️';
+                    else if (['mp4','webm','mov'].includes(ext)) icon = '🎬';
+                    else if (ext === 'html') icon = '📋';
+                    html += `<li style="padding:8px 0; border-bottom:1px solid #eee;">
+                        ${icon} <a href="${f.url}" target="_blank" style="font-size:18px;">${f.filename}</a>
+                        <span style="color:#888; margin-left:15px;">${date}</span>
+                        <span style="margin-left:15px;"><a href="${f.url}" download style="background:#007bff; color:#fff; padding:4px 10px; border-radius:4px; text-decoration:none;">Скачать</a></span>
+                    </li>`;
+                });
+                html += '</ul>';
+                container.innerHTML = html;
+            })
+            .catch(err => {
+                document.getElementById('filesList').innerHTML = 'Ошибка загрузки файлов';
+                console.error(err);
+            });
+    </script>
+</body>
+</html>

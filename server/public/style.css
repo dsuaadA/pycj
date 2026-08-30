@@ -1,0 +1,33 @@
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:Arial, sans-serif; background:#f4f4f4; color:#333; }
+body.dark { background:#1a1a1a; color:#eee; }
+body.dark .navbar { background:#2a2a2a; }
+body.dark .card { background:#2a2a2a; border-color:#444; }
+.navbar { display:flex; justify-content:space-between; align-items:center; background:#333; color:#fff; padding:10px 20px; }
+.nav-brand { font-size:1.5rem; }
+.burger { display:none; background:none; border:none; color:#fff; font-size:1.8rem; cursor:pointer; }
+.nav-menu { display:flex; list-style:none; }
+.nav-menu li { margin:0 10px; }
+.nav-menu a { color:#fff; text-decoration:none; cursor:pointer; }
+.container { padding:20px; max-width:1200px; margin:0 auto; }
+.card { background:#fff; border-radius:8px; padding:20px; margin:10px 0; border:1px solid #ddd; }
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:15px; }
+.device-item { cursor:pointer; padding:15px; border:1px solid #ccc; border-radius:8px; text-align:center; transition:0.2s; }
+.device-item:hover { transform:scale(1.02); }
+.status.online { color:green; }
+.status.offline { color:red; }
+.control-panel { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; margin:15px 0; }
+.control-panel button { padding:10px; background:#007bff; color:#fff; border:none; border-radius:5px; cursor:pointer; }
+.control-panel button:hover { background:#0056b3; }
+.login-container { display:flex; justify-content:center; align-items:center; height:100vh; }
+.login-box { background:#fff; padding:40px; border-radius:10px; box-shadow:0 0 20px rgba(0,0,0,0.1); min-width:300px; }
+.login-box input { width:100%; padding:10px; margin:10px 0; border:1px solid #ccc; border-radius:5px; }
+.login-box button { width:100%; padding:10px; background:#007bff; color:#fff; border:none; border-radius:5px; cursor:pointer; }
+.error { color:red; margin-top:10px; }
+.detail-info { margin:10px 0; }
+@media (max-width:768px) {
+    .burger { display:block; }
+    .nav-menu { display:none; flex-direction:column; width:100%; }
+    .nav-menu.active { display:flex; }
+    .nav-menu li { margin:5px 0; }
+}

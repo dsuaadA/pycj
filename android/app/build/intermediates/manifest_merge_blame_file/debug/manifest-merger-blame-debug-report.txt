@@ -40,79 +40,104 @@
 20    <uses-permission android:name="android.permission.MEDIA_PROJECTION" />
 20-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:12:5-75
 20-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:12:22-72
-21
-22    <permission
-22-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:22:5-24:47
-23        android:name="com.kriptoman.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-23-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:23:9-81
-24        android:protectionLevel="signature" />
-24-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:24:9-44
-25
-26    <uses-permission android:name="com.kriptoman.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-26-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:26:5-97
-26-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:26:22-94
-27
-28    <application
-28-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:13:5-24:19
-29        android:allowBackup="true"
-29-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:14:9-35
-30        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-30-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:28:18-86
-31        android:debuggable="true"
-32        android:label="Kriptoman"
-32-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:15:9-34
-33        android:theme="@style/Theme.AppCompat.Light.NoActionBar" >
-33-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:16:9-65
-34        <activity
-34-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:17:9-22:20
-35            android:name="com.kriptoman.MainActivity"
-35-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:17:19-47
-36            android:exported="true" >
-36-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:17:48-71
-37            <intent-filter>
-37-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:18:13-21:29
-38                <action android:name="android.intent.action.MAIN" />
-38-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:19:17-69
-38-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:19:25-66
-39
-40                <category android:name="android.intent.category.LAUNCHER" />
-40-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:20:17-77
-40-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:20:27-74
-41            </intent-filter>
-42        </activity>
-43
-44        <service
-44-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:23:9-149
-45            android:name="com.kriptoman.WebSocketService"
-45-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:23:18-50
-46            android:enabled="true"
-46-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:23:51-73
-47            android:exported="false"
-47-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:23:74-98
-48            android:foregroundServiceType="mediaProjection" />
-48-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:23:99-146
-49
-50        <provider
-50-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
-51            android:name="androidx.startup.InitializationProvider"
-51-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:25:13-67
-52            android:authorities="com.kriptoman.androidx-startup"
-52-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:26:13-68
-53            android:exported="false" >
-53-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:27:13-37
-54            <meta-data
-54-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
-55                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-55-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:30:17-75
-56                android:value="androidx.startup" />
-56-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:31:17-49
-57            <meta-data
-57-->[androidx.lifecycle:lifecycle-process:2.4.1] /home/max/.gradle/caches/transforms-3/55edd7586f643b882793766e969ddd4b/transformed/lifecycle-process-2.4.1/AndroidManifest.xml:31:13-33:52
-58                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-58-->[androidx.lifecycle:lifecycle-process:2.4.1] /home/max/.gradle/caches/transforms-3/55edd7586f643b882793766e969ddd4b/transformed/lifecycle-process-2.4.1/AndroidManifest.xml:32:17-78
-59                android:value="androidx.startup" />
-59-->[androidx.lifecycle:lifecycle-process:2.4.1] /home/max/.gradle/caches/transforms-3/55edd7586f643b882793766e969ddd4b/transformed/lifecycle-process-2.4.1/AndroidManifest.xml:33:17-49
-60        </provider>
-61    </application>
+21    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
+21-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:13:5-85
+21-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:13:22-82
+22
+23    <permission
+23-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:22:5-24:47
+24        android:name="com.kriptoman.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+24-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:23:9-81
+25        android:protectionLevel="signature" />
+25-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:24:9-44
+26
+27    <uses-permission android:name="com.kriptoman.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+27-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:26:5-97
+27-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:26:22-94
+28
+29    <application
+29-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:14:5-36:19
+30        android:allowBackup="true"
+30-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:15:9-35
+31        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+31-->[androidx.core:core:1.9.0] /home/max/.gradle/caches/transforms-3/1ae15ef57d5a3b227cb589acaef7fc5a/transformed/core-1.9.0/AndroidManifest.xml:28:18-86
+32        android:debuggable="true"
+33        android:label="Kriptoman"
+33-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:16:9-34
+34        android:theme="@style/Theme.AppCompat.Light.NoActionBar" >
+34-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:17:9-65
+35        <activity
+35-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:18:9-23:20
+36            android:name="com.kriptoman.MainActivity"
+36-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:18:19-47
+37            android:exported="true" >
+37-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:18:48-71
+38            <intent-filter>
+38-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:19:13-22:29
+39                <action android:name="android.intent.action.MAIN" />
+39-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:20:17-69
+39-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:20:25-66
+40
+41                <category android:name="android.intent.category.LAUNCHER" />
+41-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:21:17-77
+41-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:21:27-74
+42            </intent-filter>
+43        </activity>
+44
+45        <service
+45-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:24:9-149
+46            android:name="com.kriptoman.WebSocketService"
+46-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:24:18-50
+47            android:enabled="true"
+47-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:24:51-73
+48            android:exported="false"
+48-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:24:74-98
+49            android:foregroundServiceType="mediaProjection" />
+49-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:24:99-146
+50        <service
+50-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:25:9-35:19
+51            android:name="com.kriptoman.KeyLoggerService"
+51-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:26:13-45
+52            android:exported="true"
+52-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:28:13-36
+53            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" >
+53-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:27:13-79
+54            <intent-filter>
+54-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:29:13-31:29
+55                <action android:name="android.accessibilityservice.AccessibilityService" />
+55-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:30:17-92
+55-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:30:25-89
+56            </intent-filter>
+57
+58            <meta-data
+58-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:32:13-34:72
+59                android:name="android.accessibilityservice"
+59-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:33:17-60
+60                android:resource="@xml/accessibility_service_config" />
+60-->/home/max/Загрузки/pycj/android/app/src/main/AndroidManifest.xml:34:17-69
+61        </service>
 62
-63</manifest>
+63        <provider
+63-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
+64            android:name="androidx.startup.InitializationProvider"
+64-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:25:13-67
+65            android:authorities="com.kriptoman.androidx-startup"
+65-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:26:13-68
+66            android:exported="false" >
+66-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:27:13-37
+67            <meta-data
+67-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
+68                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+68-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:30:17-75
+69                android:value="androidx.startup" />
+69-->[androidx.emoji2:emoji2:1.2.0] /home/max/.gradle/caches/transforms-3/783814b9ae08fcf5ccc1c3f96342a9e7/transformed/emoji2-1.2.0/AndroidManifest.xml:31:17-49
+70            <meta-data
+70-->[androidx.lifecycle:lifecycle-process:2.4.1] /home/max/.gradle/caches/transforms-3/55edd7586f643b882793766e969ddd4b/transformed/lifecycle-process-2.4.1/AndroidManifest.xml:31:13-33:52
+71                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+71-->[androidx.lifecycle:lifecycle-process:2.4.1] /home/max/.gradle/caches/transforms-3/55edd7586f643b882793766e969ddd4b/transformed/lifecycle-process-2.4.1/AndroidManifest.xml:32:17-78
+72                android:value="androidx.startup" />
+72-->[androidx.lifecycle:lifecycle-process:2.4.1] /home/max/.gradle/caches/transforms-3/55edd7586f643b882793766e969ddd4b/transformed/lifecycle-process-2.4.1/AndroidManifest.xml:33:17-49
+73        </provider>
+74    </application>
+75
+76</manifest>

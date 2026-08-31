@@ -1,6 +1,10 @@
 [
     {
-        "merged": "com.kriptoman.app-merged_res-29:/layout_activity_main.xml.flat",
-        "source": "com.kriptoman.app-main-31:/layout/activity_main.xml"
+        "merged": "/home/max/.gradle/daemon/8.5/com.kriptoman.app-merged_res-29:/layout_activity_main.xml.flat",
+        "source": "/home/max/.gradle/daemon/8.5/com.kriptoman.app-main-31:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.kriptoman.app-merged_res-29:/xml_accessibility_service_config.xml.flat",
+        "source": "com.kriptoman.app-main-31:/xml/accessibility_service_config.xml"
     }
 ]

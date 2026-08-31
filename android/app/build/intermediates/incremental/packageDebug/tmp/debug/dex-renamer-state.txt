@@ -1,4 +1,4 @@
-#Mon Aug 31 00:44:04 EEST 2026
+#Mon Aug 31 09:09:45 EEST 2026
 base.2=/home/max/Загрузки/pycj/android/app/build/intermediates/dex/debug/mergeProjectDexDebug/5/classes.dex
 path.2=5/classes.dex
 base.1=/home/max/Загрузки/pycj/android/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex

